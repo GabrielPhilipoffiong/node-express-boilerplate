@@ -1,4 +1,4 @@
-name: Deploy to ECR and EC2
+name: 🚀 Deploy hostage1 App to AWS ECR & EC2
 
 on:
   push:
@@ -6,38 +6,64 @@ on:
 
 jobs:
   deploy:
+    name: 🌍 Build, Push & Deploy
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout
+    - name: 🧾 Checkout Repository
       uses: actions/checkout@v4
-    
-    - name: Configure AWS
+
+    - name: 🔧 Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
-    
-    - name: Login to ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v2
-    
-    - name: Build and push to ECR
+
+    - name: 🔐 Login to Amazon ECR
       run: |
+        echo "🔑 Logging in to ECR..."
+        aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 169655674108.dkr.ecr.us-east-1.amazonaws.com
+
+    - name: 🐳 Build, Tag & Push Docker Image
+      run: |
+        echo "🛠️ Building Docker image..."
         docker build -t hostage1 .
         docker tag hostage1:latest 169655674108.dkr.ecr.us-east-1.amazonaws.com/hostage1:latest
+        echo "📦 Pushing Docker image to ECR..."
         docker push 169655674108.dkr.ecr.us-east-1.amazonaws.com/hostage1:latest
-    
-    - name: Deploy to EC2
+        echo "✅ Docker image pushed successfully!"
+
+    - name: 🚢 Deploy on EC2 Instance
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USERNAME }}
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
+          echo "🔑 Logging into ECR from EC2..."
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 169655674108.dkr.ecr.us-east-1.amazonaws.com
-          docker stop node-express-app || true
-          docker rm node-express-app || true
+          
+          echo "🧹 Cleaning up old container..."
+          docker stop hostage1 || true
+          docker rm hostage1 || true
+          
+          echo "⬇️ Pulling the latest image..."
           docker pull 169655674108.dkr.ecr.us-east-1.amazonaws.com/hostage1:latest
-          docker run -d --name node-express-app -p 5050:5050 --restart unless-stopped 169655674108.dkr.ecr.us-east-1.amazonaws.com/hostage1:latest
+          
+          echo "🚀 Starting new container..."
+          docker run -d \
+            --name hostage1 \
+            -p 5050:5050 \
+            --restart unless-stopped \
+            169655674108.dkr.ecr.us-east-1.amazonaws.com/hostage1:latest
+          
+          echo "✅ Deployment successful! 🎉"
+
+    - name: 🎯 Notify Success
+      if: success()
+      run: echo "✅ hostage1 successfully deployed to EC2!"
+
+    - name: ⚠️ Notify Failure
+      if: failure()
+      run: echo "❌ Deployment failed — check workflow logs for details."
