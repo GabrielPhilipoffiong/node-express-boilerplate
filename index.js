@@ -24,7 +24,10 @@ app.use(logger); // Logging middleware
 
 // Routes
 app.get("/", (req, res) => {
-  res.json({ info: "Node.js, Express, and Postgres API" });
+  res.json({ 
+    info: "Gabriel's Docker footprint",
+    message: "Welcome to my world of DevOps 2025"
+  });
 });
 
 app.use("/demo", authController.verifyToken, demoRoute);
